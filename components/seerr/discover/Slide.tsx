@@ -4,6 +4,7 @@ import type React from "react";
 import type { PropsWithChildren } from "react";
 import { View, type ViewProps, type ViewStyle } from "react-native";
 import { Text } from "@/components/common/Text";
+import { serverRow } from "@/utils/seerr/sliders";
 import type { DiscoverSlider } from "@/utils/seerr/types";
 import { DiscoverSliderType } from "@/utils/seerr/types";
 
@@ -34,7 +35,10 @@ const Slide = <T,>({
   return (
     <View {...props}>
       <Text className='font-bold text-lg mb-2 px-4'>
-        {t(`search.${DiscoverSliderType[slide.type].toString().toLowerCase()}`)}
+        {serverRow(slide)?.title ??
+          t(
+            `search.${DiscoverSliderType[slide.type].toString().toLowerCase()}`,
+          )}
       </Text>
       <FlashList
         horizontal

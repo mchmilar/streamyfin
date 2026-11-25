@@ -6,6 +6,7 @@ import { TVSeerrRow } from "@/components/seerr/discover/TVSeerrRow";
 import { TVSeerrPosterCard } from "@/components/tv/TVSeerrPosterCard";
 import useRouter from "@/hooks/useAppRouter";
 import { type DiscoverEndpoint, Endpoints, useSeerr } from "@/hooks/useSeerr";
+import { serverRow } from "@/utils/seerr/sliders";
 import type {
   DiscoverSlider,
   MovieResult,
@@ -39,13 +40,19 @@ export const TVDiscoverSlide: React.FC<TVDiscoverSlideProps> = ({
     [router],
   );
 
+  // A row the server describes itself is read from where it says its pages
+  // are; the others from the route of their type, below.
+  const row = serverRow(slide);
+
   const { data, fetchNextPage, hasNextPage } = useInfiniteQuery({
-    queryKey: ["seerr", "discover", "tv", slide.id],
+    queryKey: ["seerr", "discover", "tv", slide.id ?? row?.path],
     queryFn: async ({ pageParam }) => {
       let endpoint: DiscoverEndpoint | undefined;
       let params: Record<string, unknown> = {
         page: Number(pageParam),
       };
+
+      if (row) return seerrApi?.discover(row.path, params);
 
       switch (slide.type) {
         case DiscoverSliderType.TRENDING:
@@ -92,9 +99,9 @@ export const TVDiscoverSlide: React.FC<TVDiscoverSlideProps> = ({
     [data, isSeerrMovieOrTvResult],
   );
 
-  const slideTitle = t(
-    `search.${DiscoverSliderType[slide.type].toString().toLowerCase()}`,
-  );
+  const slideTitle =
+    row?.title ??
+    t(`search.${DiscoverSliderType[slide.type].toString().toLowerCase()}`);
 
   if (!flatData || flatData.length === 0) return null;
 

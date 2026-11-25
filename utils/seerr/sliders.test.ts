@@ -1,5 +1,10 @@
 import { Permission } from "./permissions";
-import { discoverRows, loadDiscoverSliders, slidersOf } from "./sliders";
+import {
+  discoverRows,
+  loadDiscoverSliders,
+  serverRow,
+  slidersOf,
+} from "./sliders";
 import { type DiscoverSlider, DiscoverSliderType } from "./types";
 
 const slider = (
@@ -65,6 +70,122 @@ describe("discoverRows", () => {
     ["an object", { message: "Not found" }],
   ])("has no rows when what was cached is %s", (_name, cached) => {
     expect(discoverRows(cached, Permission.REQUEST)).toEqual([]);
+  });
+});
+
+// A type the app has no code for, numbered past Seerr's own.
+const UNKNOWN_TYPE = 100 as DiscoverSliderType;
+
+const described = (over: Partial<DiscoverSlider> = {}): DiscoverSlider =>
+  ({
+    id: 50,
+    type: UNKNOWN_TYPE,
+    order: 0,
+    enabled: true,
+    isBuiltIn: false,
+    title: "Picked for you",
+    endpoint: "/api/v1/picks/for-me?kind=mixed",
+    ...over,
+  }) as DiscoverSlider;
+
+// A row a fork of Seerr, or a service in front of it, adds to Discover: the
+// app does not know its type, so the server says what to call it and where
+// its pages are.
+describe("serverRow", () => {
+  test("is the title and the path under /api/v1, query kept", () => {
+    expect(serverRow(described())).toEqual({
+      title: "Picked for you",
+      path: "/picks/for-me?kind=mixed",
+    });
+  });
+
+  test("takes the default title when the row has none of its own", () => {
+    expect(
+      serverRow(described({ title: null, defaultTitle: " From Trakt " }))
+        ?.title,
+    ).toBe("From Trakt");
+  });
+
+  // There is no translated name to fall back on for a type the app does
+  // not know, and a row with no name over it reads as a broken screen.
+  test.each([
+    ["no title", { title: null }],
+    ["a blank title", { title: "   " }],
+  ])("is none with %s", (_name, over) => {
+    expect(serverRow(described(over))).toBeUndefined();
+  });
+
+  // The route is called with the Seerr session, which is for that API alone.
+  test.each([
+    ["none", undefined],
+    ["a full address", "https://elsewhere.example/api/v1/picks"],
+    ["a path outside the API", "/login"],
+    ["the API's root alone", "/api/v1"],
+    ["a path that climbs out", "/api/v1/../admin"],
+    ["a path with an empty segment", "/api/v1//elsewhere.example/picks"],
+    ["a path with a space", "/api/v1/picks for me"],
+    ["something that is not text", 7],
+  ])("is none when the endpoint is %s", (_name, endpoint) => {
+    expect(
+      serverRow(described({ endpoint: endpoint as string })),
+    ).toBeUndefined();
+  });
+
+  // Trending stays trending, on its own route and under its translated
+  // name, whatever a server sends along with it.
+  test("is none for a type the app draws itself", () => {
+    expect(
+      serverRow(described({ type: DiscoverSliderType.TRENDING })),
+    ).toBeUndefined();
+  });
+});
+
+describe("discoverRows with rows the server describes", () => {
+  test("keeps them, in the server's order, among its own", () => {
+    const rows = discoverRows(
+      [
+        slider(DiscoverSliderType.TRENDING, 1),
+        described({ order: 0 }),
+        described({ id: 51, order: 2, title: "Because you watched Dune" }),
+      ],
+      Permission.REQUEST,
+    );
+    expect(rows.map((row) => row.title ?? row.type)).toEqual([
+      "Picked for you",
+      DiscoverSliderType.TRENDING,
+      "Because you watched Dune",
+    ]);
+  });
+
+  test("leaves out one the server turned off", () => {
+    expect(
+      discoverRows([described({ enabled: false })], Permission.REQUEST),
+    ).toEqual([]);
+  });
+
+  test("leaves out one it could not name or reach", () => {
+    expect(
+      discoverRows(
+        [described({ title: null }), described({ endpoint: "/login" })],
+        Permission.REQUEST,
+      ),
+    ).toEqual([]);
+  });
+
+  // Seerr's own custom rows carry no endpoint, and stay left out.
+  test("still leaves out a custom row that says nothing of where it is", () => {
+    expect(
+      discoverRows(
+        [
+          {
+            ...slider(DiscoverSliderType.TMDB_MOVIE_KEYWORD, 0),
+            title: "Heists",
+            data: "10051",
+          },
+        ],
+        Permission.REQUEST,
+      ),
+    ).toEqual([]);
   });
 });
 

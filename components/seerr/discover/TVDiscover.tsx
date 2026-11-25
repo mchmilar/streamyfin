@@ -91,7 +91,15 @@ export const TVDiscover: React.FC<TVDiscoverProps> = ({ sliders }) => {
               />
             );
           default:
-            return null;
+            // A row the server describes itself (serverRow): the one other
+            // kind discoverRows lets through, drawn as a row of posters.
+            return (
+              <TVDiscoverSlide
+                key={slide.id ?? slide.endpoint}
+                slide={slide}
+                isFirstSlide={isFirstSlide}
+              />
+            );
         }
       })}
     </View>

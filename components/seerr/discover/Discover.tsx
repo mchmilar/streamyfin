@@ -53,7 +53,11 @@ const Discover: React.FC<Props> = ({ sliders }) => {
           case DiscoverSliderType.UPCOMING_TV:
             return <MovieTvSlide key={slide.id} slide={slide} />;
           default:
-            return null;
+            // A row the server describes itself (serverRow): the one other
+            // kind discoverRows lets through, drawn as a row of posters.
+            return (
+              <MovieTvSlide key={slide.id ?? slide.endpoint} slide={slide} />
+            );
         }
       })}
     </View>

@@ -391,6 +391,13 @@ export type DiscoverSlider = Schemas["DiscoverSlider"] & {
   order?: number;
   createdAt?: string;
   updatedAt?: string;
+  /**
+   * Where the pages of a row the server describes itself are: the whole API
+   * path and query, `page` left off. Not Seerr's own; see serverRow.
+   */
+  endpoint?: string;
+  /** What to call such a row when its `title` is empty. */
+  defaultTitle?: string;
 };
 
 /**

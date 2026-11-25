@@ -6,6 +6,7 @@ import type { ViewProps } from "react-native";
 import SeerrPoster from "@/components/posters/SeerrPoster";
 import Slide, { type SlideProps } from "@/components/seerr/discover/Slide";
 import { type DiscoverEndpoint, Endpoints, useSeerr } from "@/hooks/useSeerr";
+import { serverRow } from "@/utils/seerr/sliders";
 import { DiscoverSliderType } from "@/utils/seerr/types";
 
 const MovieTvSlide: React.FC<SlideProps & ViewProps> = ({
@@ -14,13 +15,19 @@ const MovieTvSlide: React.FC<SlideProps & ViewProps> = ({
 }) => {
   const { seerrApi, isSeerrMovieOrTvResult } = useSeerr();
 
+  // A row the server describes itself is read from where it says its pages
+  // are; the others from the route of their type, below.
+  const row = serverRow(slide);
+
   const { data, fetchNextPage, hasNextPage } = useInfiniteQuery({
-    queryKey: ["seerr", "discover", slide.id],
+    queryKey: ["seerr", "discover", slide.id ?? row?.path],
     queryFn: async ({ pageParam }) => {
       let endpoint: DiscoverEndpoint | undefined;
       let params: any = {
         page: Number(pageParam),
       };
+
+      if (row) return seerrApi?.discover(row.path, params);
 
       switch (slide.type) {
         case DiscoverSliderType.TRENDING:
